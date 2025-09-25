@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.mid
+*.pyc
+.DS_Store
+Projet_IA.docx
+Projet_IA.pdf
+
