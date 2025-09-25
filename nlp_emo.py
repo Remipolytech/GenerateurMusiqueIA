@@ -1,5 +1,5 @@
 # nlp_emo.py
-# Détection d'émotion très légère par lexique (CPU-only)
+# Détection d'émotion très légère par lexique 
 
 from collections import defaultdict
 import json
