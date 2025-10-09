@@ -47,7 +47,7 @@ def save_melody(emotion: str, outfile="output/test.mid"):
     os.makedirs(os.path.dirname(outfile), exist_ok=True)
     melody = make_melody(emotion)
     melody.write("midi", fp=outfile)
-    print(f"✅ Mélodie générée pour {emotion} -> {outfile}")
+    print(f" Mélodie générée pour {emotion} -> {outfile}")
 
 if __name__ == "__main__":
     save_melody("joie")
