@@ -119,3 +119,58 @@ if __name__ == "__main__":
     for t in tests:
         emo = guess_emotion(t, lx)
         print(f"[{t}] -> {emo} | scores={score_emotions(t, lx)}")
+
+# --- API propre à brancher sur le diffuseur -------------------------------
+from dataclasses import dataclass
+
+# 1) mapping simple des émotions discrètes -> (valence, arousal) dans [0,1]
+EMO_TO_VA = {
+    "joie":      (0.85, 0.65),
+    "tristesse": (0.20, 0.30),
+    "colere":    (0.15, 0.85),
+    "calme":     (0.60, 0.25),
+    "mystere":   (0.45, 0.40),
+    "energie":   (0.70, 0.80),
+}
+
+@dataclass
+class EmotionOutput:
+    labels: list[str]          # ex: ["tristesse","calme"]
+    probs: dict[str, float]    # scores normalisés (somme=1)
+    va: tuple[float, float]    # (valence, arousal) dans [0,1]
+    raw_scores: dict[str, int] # scores entiers du lexique
+
+def softmax_dict(d: dict[str, float]) -> dict[str, float]:
+    import math
+    if not d: return {}
+    m = max(d.values())
+    exps = {k: math.exp(v - m) for k, v in d.items()}
+    s = sum(exps.values())
+    return {k: (exps[k]/s) for k in d}
+
+def aggregate_va(probs: dict[str, float]) -> tuple[float,float]:
+    if not probs: return (0.5, 0.5)
+    v = sum(EMO_TO_VA.get(k, (0.5,0.5))[0] * p for k,p in probs.items())
+    a = sum(EMO_TO_VA.get(k, (0.5,0.5))[1] * p for k,p in probs.items())
+    return (float(v), float(a))
+
+def analyze_text_emotion(text: str, lexicon: dict) -> EmotionOutput:
+    sc = score_emotions(text, lexicon)           # tes scores entiers
+    if not sc:
+        sc = {"calme": 1}                        # défaut stable
+    probs = softmax_dict(sc)                     # normalise
+    # top-2 labels pour enrichir le prompt
+    labels = [k for k,_ in sorted(probs.items(), key=lambda kv: -kv[1])[:2]]
+    va = aggregate_va(probs)
+    return EmotionOutput(labels=labels, probs=probs, va=va, raw_scores=sc)
+
+def emotion_to_prompt(user_text: str, emo: EmotionOutput) -> str:
+    v, a = emo.va
+    mood = ", ".join(emo.labels)
+    # prompt compact pour SD1.5-LoRA-spectrogrammes
+    # (on reste descriptif et constant d’un sample à l’autre)
+    return (
+        f"{user_text}. "
+        f"spectrogram of {mood} ambient sound, sustained tones, minimal rhythm. "
+        f"valence:{v:.2f}, arousal:{a:.2f}, 24kHz, 10s, clean texture"
+    )
