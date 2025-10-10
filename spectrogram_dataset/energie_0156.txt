@@ -1,0 +1,1 @@
+a energie spectrogram image of synthetic audio, 24kHz, 10s, clean texture
